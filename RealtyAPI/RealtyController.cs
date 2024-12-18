@@ -220,21 +220,21 @@ namespace RealtyAPI
             _context.Properties.Remove(realty);
             _context.SaveChanges();
 
-            return NoContent(); // Возвращаем статус 204, если удаление прошло успешно
+            return NoContent();
         }
 
         [HttpGet("AveragePriceByRealtor")]
         public IActionResult GetAveragePriceByRealtor(int year)
         {
             var result = _context.Sales
-                .Where(s => s.SaleDate.Year == year) // Фильтруем по году продажи
+                .Where(s => s.SaleDate.Year == year) 
                 .GroupBy(s => new { s.RealtorId, s.Realtor.FirstName, s.Realtor.LastName }) // Группируем по риэлтору
                 .Select(group => new
                 {
-                    RealtorName = group.Key.FirstName + " " + group.Key.LastName, // Формируем полное имя риэлтора
-                    AveragePrice = group.Average(s => s.SalePrice) // Средняя цена продажи
+                    RealtorName = group.Key.FirstName + " " + group.Key.LastName,
+                    AveragePrice = group.Average(s => s.SalePrice)
                 })
-                .ToList(); // Преобразуем в список
+                .ToList();
 
             return Ok(result);
         }
@@ -244,30 +244,29 @@ namespace RealtyAPI
         {
             // Сначала вычислим среднюю стоимость за м² по каждому району
             var avgPricePerDistrict = _context.Properties
-                .GroupBy(p => p.DistrictID) // Группируем по району
+                .GroupBy(p => p.DistrictID) 
                 .Select(g => new
                 {
                     DistrictID = g.Key,
                     AveragePricePerMeter = g.Average(p => (double)p.Price / p.Area) // Средняя стоимость 1 м² в районе
                 })
-                .ToList(); // Получаем список с результатами
+                .ToList(); 
 
             // Теперь найдем объекты, у которых стоимость 1 м² меньше средней по району
             var result = _context.Properties
-                .Where(p => p.Area > 0) // Проверяем, чтобы площадь не была нулевой
+                .Where(p => p.Area > 0)
                 .Select(p => new
                 {
                     p.Address, // Адрес объекта
                     PricePerMeter = (double)p.Price / p.Area, // Стоимость за м²
                     p.DistrictID
                 })
-                .ToList() // Получаем список объектов недвижимости
+                .ToList() 
                 .Where(p => avgPricePerDistrict
                     .Any(d => d.DistrictID == p.DistrictID && p.PricePerMeter < d.AveragePricePerMeter)) // Сравниваем с средней стоимостью 1 м² в районе
-                .Select(p => p.Address) // Выбираем только адреса
-                .ToList(); // Получаем итоговый список адресов
+                .Select(p => p.Address) 
+                .ToList();
 
-            // Возвращаем результат
             return Ok(result);
         }
 
@@ -275,13 +274,13 @@ namespace RealtyAPI
         public IActionResult GetRealtorsWithFewSales()
         {
             var result = _context.Sales
-                .GroupBy(s => new { s.RealtorId, s.Realtor.FirstName, s.Realtor.LastName }) // Группируем по риэлтору
+                .GroupBy(s => new { s.RealtorId, s.Realtor.FirstName, s.Realtor.LastName })
                 .Where(group => group.Count() < 5) // Фильтруем риэлторов, которые продали меньше 5 объектов
                 .Select(group => new
                 {
-                    RealtorName = group.Key.FirstName + " " + group.Key.LastName // Формируем полное имя риэлтора
+                    RealtorName = group.Key.FirstName + " " + group.Key.LastName 
                 })
-                .ToList(); // Преобразуем результат в список
+                .ToList();
 
             return Ok(result);
         }
@@ -289,7 +288,6 @@ namespace RealtyAPI
         [HttpGet("RealtorsWithNoSalesThisYear")]
         public IActionResult GetRealtorsWithNoSalesThisYear()
         {
-            // Получаем текущий год
             int currentYear = System.DateTime.Now.Year;
 
             // Выбираем риэлторов, которые не имеют продаж в текущем году
@@ -298,9 +296,9 @@ namespace RealtyAPI
                     .Any(s => s.RealtorId == r.Id && s.SaleDate.Year == currentYear)) // Проверяем, есть ли у риэлтора продажи в текущем году
                 .Select(r => new
                 {
-                    FullName = r.FirstName + " " + r.LastName // Формируем ФИО риэлтора
+                    FullName = r.FirstName + " " + r.LastName 
                 })
-                .ToList(); // Получаем список риэлторов без продаж в текущем году
+                .ToList();
 
             return Ok(result);
         }
@@ -310,10 +308,10 @@ namespace RealtyAPI
         {
             // Группируем объекты недвижимости по году размещения
             var result = _context.Properties
-                .GroupBy(p => p.AnnouncmentDT.Year) // Группируем по году
+                .GroupBy(p => p.AnnouncmentDT.Year) 
                 .Where(g => g.Count() >= 2 && g.Count() <= 3) // Фильтруем годы с количеством объектов от 2 до 3
-                .Select(g => g.Key) // Извлекаем только года
-                .ToList(); // Получаем список годов
+                .Select(g => g.Key) 
+                .ToList();
 
             return Ok(result);
         }
@@ -322,19 +320,19 @@ namespace RealtyAPI
         public IActionResult GetMostExpensiveRealtyByDistrict()
         {
             var result = _context.Properties
-                .GroupBy(p => p.DistrictID) // Группируем объекты недвижимости по району
+                .GroupBy(p => p.DistrictID) 
                 .Select(g => new
                 {
                     DistrictID = g.Key, // ID района
                     MostExpensiveRealty = g.OrderByDescending(p => p.Price).FirstOrDefault() // Самый дорогой объект в районе
                 })
-                .ToList(); // Получаем список результатов
+                .ToList(); 
 
             // Проекция данных в удобный формат для ответа
             var formattedResult = result.Select(g => new
             {
                 DistrictID = g.DistrictID,
-                Address = g.MostExpensiveRealty?.Address, // Проверяем на null, чтобы избежать ошибки при отсутствии самого дорогого объекта
+                Address = g.MostExpensiveRealty?.Address,
                 Price = g.MostExpensiveRealty?.Price
             }).ToList();
 
