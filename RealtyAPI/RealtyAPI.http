@@ -1,0 +1,6 @@
+@RealtyAPI_HostAddress = http://localhost:5063
+
+GET {{RealtyAPI_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
